@@ -1,0 +1,12 @@
+kubeProxyReplacement: true
+l2announcements: 
+  enabled: true
+ipam:
+  mode: kubernetes
+ingressController:
+  enabled: true
+gatewayAPI:
+  enabled: true
+hubble:
+  relay:
+    enabled: true

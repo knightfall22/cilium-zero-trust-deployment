@@ -1,0 +1,170 @@
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata: 
+  name: cart-policy
+  namespace: boutique
+spec:
+  endpointSelector:
+    matchLabels:
+      app: cartservice
+  egress:
+    - toEndpoints:
+      - matchLabels:
+          app: redis-cart
+      toPorts:
+      - ports:
+        - port: "6379"
+          protocol: TCP
+
+---
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: loadgenerator-policy
+  namespace: boutique
+spec:
+  endpointSelector:
+    matchLabels:
+      app: loadgenerator
+  egress:
+    - toEndpoints:
+      - matchLabels:
+          app: frontend
+      toPorts:
+      - ports:
+        - port: "8080"
+          protocol: TCP
+
+---
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: frontend-policy
+  namespace: boutique
+spec:
+  endpointSelector:
+    matchLabels:
+      app: frontend
+  egress:
+    - toEndpoints:
+      - matchLabels:
+          app: adservice
+      toPorts:
+      - ports:
+        - port: "9555"
+          protocol: TCP
+    - toEndpoints:
+      - matchLabels:
+          app: shippingservice
+      toPorts:
+      - ports:
+        - port: "50051"
+          protocol: TCP
+    - toEndpoints:
+      - matchLabels:
+          app: recommendationservice
+      toPorts:
+      - ports:
+        - port: "8080"
+          protocol: TCP
+    - toEndpoints:
+      - matchLabels:
+          app: checkoutservice
+      toPorts:
+      - ports:
+        - port: "5050"
+          protocol: TCP
+    - toEndpoints:
+      - matchLabels:
+          app: productcatalogservice
+      toPorts:
+      - ports:
+        - port: "3550"
+          protocol: TCP
+    - toEndpoints:
+      - matchLabels:
+          app: cartservice
+      toPorts:
+      - ports:
+        - port: "7070"
+          protocol: TCP
+    - toEndpoints:
+      - matchLabels:
+          app: currencyservice
+      toPorts:
+      - ports:
+        - port: "7000"
+          protocol: TCP
+---
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: checkout-policy
+  namespace: boutique
+spec:
+  endpointSelector:
+    matchLabels:
+      app: checkoutservice
+  egress:
+    - toEndpoints:
+      - matchLabels:
+          app: paymentservice
+      toPorts:
+      - ports:
+        - port: "50051"
+          protocol: TCP
+    - toEndpoints:
+      - matchLabels:
+          app: emailservice
+      toPorts:
+      - ports:
+        - port: "8080"
+          protocol: TCP
+    - toEndpoints:
+        - matchLabels:
+            app: productcatalogservice
+      toPorts:
+        - ports:
+            - port: "3550"
+              protocol: TCP
+    - toEndpoints:
+        - matchLabels:
+            app: cartservice
+      toPorts:
+        - ports:
+            - port: "7070"
+              protocol: TCP
+    - toEndpoints:
+        - matchLabels:
+            app: currencyservice
+      toPorts:
+        - ports:
+            - port: "7000"
+              protocol: TCP
+    - toEndpoints:
+      - matchLabels:
+          app: shippingservice
+      toPorts:
+      - ports:
+        - port: "50051"
+          protocol: TCP
+---
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: recommendation-policy
+  namespace: boutique
+spec:
+  endpointSelector:
+    matchLabels:
+      app: recommendationservice
+  egress:
+    - toEndpoints:
+      - matchLabels:
+          app: productcatalogservice
+      toPorts:
+      - ports:
+        - port: "3550"
+          protocol: TCP
+
+---
