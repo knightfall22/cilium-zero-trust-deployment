@@ -70,3 +70,49 @@ Oct 28 15:56:23.895: boutique/checkoutservice-5d5f4589c5-pvh48:58206 (ID:40344) 
 Oct 28 15:56:30.129: boutique/checkoutservice-5d5f4589c5-pvh48:58206 (ID:40344) -> boutique/paymentservice-78f6cfdf7f-jx25l:50051 (ID:63978) to-overlay FORWARDED (TCP Flags: ACK, PSH)
 Oct 28 15:56:30.129: boutique/checkoutservice-5d5f4589c5-pvh48:58206 (ID:40344) -> boutique/paymentservice-78f6cfdf7f-jx25l:50051 (ID:63978) to-endpoint FORWARDED (TCP Flags: ACK, PSH)
 ```
+
+Now we have a more secure architecture. But something is missing, inbound to the pods are still open to communication from other sources. If one pod is compromised and has any egress allow, it can probe other services freely. We test this by deploying a netshoot pod in the `kube-system` namespace:
+
+```sh
+kubectl run -n kube-system --rm -it tmp-shell 
+\ --image nicolaka/netshoot -- bash
+```
+
+The we connect to the cart and redis-cart service:
+[![inbound](./assets/ingress%20still%20works.png)](./assets/ingress%20still%20works.png)
+
+```logs
+Oct 28 16:19:22.263: kube-system/tmp-shell:41344 (ID:2195) -> boutique/redis-cart-788fbddc7-v54ln:6379 (ID:4056) to-overlay FORWARDED (TCP Flags: SYN)
+Oct 28 16:19:22.263: kube-system/tmp-shell:41344 (ID:2195) -> boutique/redis-cart-788fbddc7-v54ln:6379 (ID:4056) to-endpoint FORWARDED (TCP Flags: SYN)
+Oct 28 16:19:22.263: kube-system/tmp-shell:41344 (ID:2195) -> boutique/redis-cart-788fbddc7-v54ln:6379 (ID:4056) to-overlay FORWARDED (TCP Flags: ACK)
+Oct 28 16:19:22.263: kube-system/tmp-shell:41344 (ID:2195) -> boutique/redis-cart-788fbddc7-v54ln:6379 (ID:4056) to-endpoint FORWARDED (TCP Flags: ACK)
+Oct 28 16:19:22.263: kube-system/tmp-shell:41344 (ID:2195) -> boutique/redis-cart-788fbddc7-v54ln:6379 (ID:4056) to-overlay FORWARDED (TCP Flags: ACK, PSH)
+Oct 28 16:19:22.263: kube-system/tmp-shell:41344 (ID:2195) -> boutique/redis-cart-788fbddc7-v54ln:6379 (ID:4056) to-endpoint FORWARDED (TCP Flags: ACK, PSH)
+Oct 28 16:19:22.264: kube-system/tmp-shell:41344 (ID:2195) -> boutique/redis-cart-788fbddc7-v54ln:6379 (ID:4056) to-overlay FORWARDED (TCP Flags: ACK, FIN)
+Oct 28 16:19:22.264: kube-system/tmp-shell:41344 (ID:2195) -> boutique/redis-cart-788fbddc7-v54ln:6379 (ID:4056) to-endpoint FORWARDED (TCP Flags: ACK, FIN)
+Oct 28 16:19:22.264: kube-system/tmp-shell:41344 (ID:2195) -> boutique/redis-cart-788fbddc7-v54ln:6379 (ID:4056) to-endpoint FORWARDED (TCP Flags: ACK)
+Oct 28 16:19:22.264: kube-system/tmp-shell:41344 (ID:2195) -> boutique/redis-cart-788fbddc7-v54ln:6379 (ID:4056) to-overlay FORWARDED (TCP Flags: ACK)
+
+----
+
+Oct 28 16:19:17.658: kube-system/tmp-shell:60344 (ID:2195) -> boutique/cartservice-896c89968-th2sc:7070 (ID:16800) to-endpoint FORWARDED (TCP Flags: SYN)
+Oct 28 16:19:17.658: kube-system/tmp-shell:60344 (ID:2195) -> boutique/cartservice-896c89968-th2sc:7070 (ID:16800) to-endpoint FORWARDED (TCP Flags: ACK)
+Oct 28 16:19:17.658: kube-system/tmp-shell:60344 (ID:2195) -> boutique/cartservice-896c89968-th2sc:7070 (ID:16800) to-endpoint FORWARDED (TCP Flags: ACK, FIN)
+Oct 28 16:19:17.664: kube-system/tmp-shell:60344 (ID:2195) -> boutique/cartservice-896c89968-th2sc:7070 (ID:16800) to-endpoint FORWARDED (TCP Flags: ACK)
+```
+
+To correct this we develop an ingress call graph. To guide in the development of the ingress network policy:
+
+[![ingress-call-graph](./assets/boutique-ingress-modules.png)](./assets/boutique-ingress-modules.png)
+
+We can use our netshoot pod again to test our ingress policy:
+[![netshoot-ingress](./assets/after-ingress.png)](./assets/after-ingress.png).
+
+
+## Conclusion
+
+We have created a secure architecture for our boutique application. Looking at the hubble dashboard we can see that the dashboard is a mirror of the intial dashboard. But we know its more secure now 😉.
+
+[![hubble](./assets/finished.png)](./assets/finished.png)
+
+The app is a lot more locked down now, but there’s still more we can do. Every rule here works at L3/L4, which means it decides who can talk to whom and on which port, but not what they actually say once they’re connected. Cilium’s L7 policies would let us go a step further and limit each service to the exact API calls it needs. For example, we could make sure only checkoutservice can call PaymentService/Charge.
