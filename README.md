@@ -1,1 +1,1 @@
-# cilium-zero-trust-deployment
+# Cilium Zero Trust Deployment
