@@ -16,22 +16,34 @@ From the architecture we can develop a call graph of what pods should be able to
 
 [![mental-model](./assets/boutique-egress-modules.png)](./assets/boutique-egress-modules.png)
 
-But currently each pod can communicate freely with any other pod, even pods they have no business with. For instance by sshing into the payment pod we can access the redis cache:
+But currently each pod can communicate freely with any other pod, even pods they have no business with. For instance by sshing into the payment pod we can access the ad service:
 
 [![ssh](./assets/free-communication.png)](./assets/free-communication.png)
 
 ```log
-Oct 28 14:13:13.797: boutique/paymentservice-78f6cfdf7f-jx25l:41736 (ID:63978) -> kube-system/coredns-589f44dc88-c9zcj:53 (ID:8570) to-endpoint FORWARDED (UDP)
-Oct 28 14:13:13.799: boutique/paymentservice-78f6cfdf7f-jx25l:41736 (ID:63978) <- kube-system/coredns-589f44dc88-c9zcj:53 (ID:8570) to-overlay FORWARDED (UDP)
-Oct 28 14:18:59.774: boutique/paymentservice-78f6cfdf7f-jx25l:50207 (ID:63978) -> kube-system/coredns-589f44dc88-c9zcj:53 (ID:8570) to-endpoint FORWARDED (UDP)
-Oct 28 14:18:59.775: boutique/paymentservice-78f6cfdf7f-jx25l:50207 (ID:63978) <- kube-system/coredns-589f44dc88-c9zcj:53 (ID:8570) to-overlay FORWARDED (UDP)
-Oct 28 14:19:29.894: boutique/paymentservice-78f6cfdf7f-jx25l:59719 (ID:63978) -> kube-system/coredns-589f44dc88-c9zcj:53 (ID:8570) to-endpoint FORWARDED (UDP)
-Oct 28 14:19:29.895: boutique/paymentservice-78f6cfdf7f-jx25l:59719 (ID:63978) <- kube-system/coredns-589f44dc88-c9zcj:53 (ID:8570) to-overlay FORWARDED (UDP)
-Oct 28 14:23:53.009: boutique/checkoutservice-5d5f4589c5-pvh48:58206 (ID:40344) -> boutique/paymentservice-78f6cfdf7f-jx25l:50051 (ID:63978) to-overlay FORWARDED (TCP Flags: ACK, PSH)
-Oct 28 14:23:53.010: boutique/checkoutservice-5d5f4589c5-pvh48:58206 (ID:40344) <- boutique/paymentservice-78f6cfdf7f-jx25l:50051 (ID:63978) to-endpoint FORWARDED (TCP Flags: ACK, PSH)
-Oct 28 14:24:03.326: boutique/checkoutservice-5d5f4589c5-pvh48:58206 (ID:40344) -> boutique/paymentservice-78f6cfdf7f-jx25l:50051 (ID:63978) to-overlay FORWARDED (TCP Flags: ACK, PSH)
-Oct 28 14:24:03.327: boutique/checkoutservice-5d5f4589c5-pvh48:58206 (ID:40344) <- boutique/paymentservice-78f6cfdf7f-jx25l:50051 (ID:63978) to-endpoint FORWARDED (TCP Flags: ACK, PSH)
-Oct 28 14:24:16.683: boutique/checkoutservice-5d5f4589c5-pvh48:58206 (ID:40344) -> boutique/paymentservice-78f6cfdf7f-jx25l:50051 (ID:63978) to-overlay FORWARDED (TCP Flags: ACK, PSH)
-Oct 28 14:24:16.684: boutique/checkoutservice-5d5f4589c5-pvh48:58206 (ID:40344) <- boutique/paymentservice-78f6cfdf7f-jx25l:50051 (ID:63978) to-endpoint FORWARDED (TCP Flags: ACK, PSH)
-
+Oct 28 14:40:15.276: boutique/paymentservice-78f6cfdf7f-jx25l:40287 (ID:63978) -> boutique/adservice-6bfc5fc46c-vqw8z:9555 (ID:60129) to-endpoint FORWARDED (TCP Flags: SYN)
+Oct 28 14:40:15.276: boutique/paymentservice-78f6cfdf7f-jx25l:40287 (ID:63978) -> boutique/adservice-6bfc5fc46c-vqw8z:9555 (ID:60129) to-endpoint FORWARDED (TCP Flags: ACK)
+Oct 28 14:40:15.276: boutique/paymentservice-78f6cfdf7f-jx25l:40287 (ID:63978) -> boutique/adservice-6bfc5fc46c-vqw8z:9555 (ID:60129) to-endpoint FORWARDED (TCP Flags: ACK, FIN)
+Oct 28 14:40:15.757: boutique/paymentservice-78f6cfdf7f-jx25l:40287 (ID:63978) -> boutique/adservice-6bfc5fc46c-vqw8z:9555 (ID:60129) to-endpoint FORWARDED (TCP Flags: RST)
 ```
+
+As we can see from the logs request from the payment service is successfully forwarded to the ad service.
+
+### Denying communication
+We set up a cluster wide policy to deny egress from all pods not within the `kube-system` namespace. It is important to note that the pods still have DNS access. The policy is defined in the [deny-egress.yaml](./default-deny.yaml) file.
+The architecture now looks like this: 
+
+[![architecture](./assets/deny-egress.png)](./assets/deny-egress.png)
+
+```log
+Oct 28 14:56:45.927: boutique/paymentservice-78f6cfdf7f-jx25l:40909 (ID:63978) <> boutique/adservice-6bfc5fc46c-vqw8z:9555 (ID:60129) policy-verdict:none TRAFFIC_DIRECTION_UNKNOWN DENIED (TCP Flags: SYN)
+Oct 28 14:56:45.927: boutique/paymentservice-78f6cfdf7f-jx25l:40909 (ID:63978) <> boutique/adservice-6bfc5fc46c-vqw8z:9555 (ID:60129) Policy denied DROPPED (TCP Flags: SYN)
+Oct 28 14:56:46.942: boutique/paymentservice-78f6cfdf7f-jx25l:40909 (ID:63978) <> boutique/adservice-6bfc5fc46c-vqw8z:9555 (ID:60129) policy-verdict:none TRAFFIC_DIRECTION_UNKNOWN DENIED (TCP Flags: SYN)
+Oct 28 14:56:46.942: boutique/paymentservice-78f6cfdf7f-jx25l:40909 (ID:63978) <> boutique/adservice-6bfc5fc46c-vqw8z:9555 (ID:60129) Policy denied DROPPED (TCP Flags: SYN)
+Oct 28 14:56:47.966: boutique/paymentservice-78f6cfdf7f-jx25l:40909 (ID:63978) <> boutique/adservice-6bfc5fc46c-vqw8z:9555 (ID:60129) policy-verdict:none TRAFFIC_DIRECTION_UNKNOWN DENIED (TCP Flags: SYN)
+Oct 28 14:56:47.966: boutique/paymentservice-78f6cfdf7f-jx25l:40909 (ID:63978) <> boutique/adservice-6bfc5fc46c-vqw8z:9555 (ID:60129) Policy denied DROPPED (TCP Flags: SYN)
+```
+
+We can see a fuller vision of the communication state through hubble.
+
+[![hubble](./assets/deny-egress-hubble.png)](./assets/deny-egress-hubble.png)
