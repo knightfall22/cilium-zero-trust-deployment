@@ -47,3 +47,26 @@ Oct 28 14:56:47.966: boutique/paymentservice-78f6cfdf7f-jx25l:40909 (ID:63978) <
 We can see a fuller vision of the communication state through hubble.
 
 [![hubble](./assets/deny-egress-hubble.png)](./assets/deny-egress-hubble.png)
+
+We can now deploy the egress rules in according to the aforementioned call graph. This can be done using the [egress-network-policies.yaml](./egress-network-policies.yaml) file.
+
+We can test the communication by calling the payment and email service from checkout. We can see the requests are approved by the policy.
+```logs
+Oct 28 15:55:38.369: boutique/checkoutservice-5d5f4589c5-pvh48:36306 (ID:40344) -> boutique/emailservice-558899d44c-lw6j7:8080 (ID:14088) to-endpoint FORWARDED (TCP Flags: ACK)
+Oct 28 15:55:51.475: boutique/checkoutservice-5d5f4589c5-pvh48:36306 (ID:40344) -> boutique/emailservice-558899d44c-lw6j7:8080 (ID:14088) to-endpoint FORWARDED (TCP Flags: ACK)
+Oct 28 15:56:00.182: boutique/checkoutservice-5d5f4589c5-pvh48:36306 (ID:40344) -> boutique/emailservice-558899d44c-lw6j7:8080 (ID:14088) to-endpoint FORWARDED (TCP Flags: ACK, PSH)
+Oct 28 15:56:23.897: boutique/checkoutservice-5d5f4589c5-pvh48:36306 (ID:40344) -> boutique/emailservice-558899d44c-lw6j7:8080 (ID:14088) to-endpoint FORWARDED (TCP Flags: ACK, PSH)
+Oct 28 15:56:30.131: boutique/checkoutservice-5d5f4589c5-pvh48:36306 (ID:40344) -> boutique/emailservice-558899d44c-lw6j7:8080 (ID:14088) to-endpoint FORWARDED (TCP Flags: ACK, PSH)
+Oct 28 15:56:48.966: boutique/checkoutservice-5d5f4589c5-pvh48:36306 (ID:40344) -> boutique/emailservice-558899d44c-lw6j7:8080 (ID:14088) to-endpoint FORWARDED (TCP Flags: ACK, PSH)
+----
+Oct 28 15:54:54.474: boutique/checkoutservice-5d5f4589c5-pvh48:58206 (ID:40344) -> boutique/paymentservice-78f6cfdf7f-jx25l:50051 (ID:63978) to-endpoint FORWARDED (TCP Flags: ACK, PSH)
+Oct 28 15:55:28.244: boutique/checkoutservice-5d5f4589c5-pvh48:58206 (ID:40344) -> boutique/paymentservice-78f6cfdf7f-jx25l:50051 (ID:63978) to-endpoint FORWARDED (TCP Flags: ACK, PSH)
+Oct 28 15:55:39.387: boutique/checkoutservice-5d5f4589c5-pvh48:58206 (ID:40344) -> boutique/paymentservice-78f6cfdf7f-jx25l:50051 (ID:63978) to-overlay FORWARDED (TCP Flags: ACK, PSH)
+Oct 28 15:55:39.387: boutique/checkoutservice-5d5f4589c5-pvh48:58206 (ID:40344) -> boutique/paymentservice-78f6cfdf7f-jx25l:50051 (ID:63978) to-endpoint FORWARDED (TCP Flags: ACK, PSH)
+Oct 28 15:56:00.180: boutique/checkoutservice-5d5f4589c5-pvh48:58206 (ID:40344) -> boutique/paymentservice-78f6cfdf7f-jx25l:50051 (ID:63978) to-overlay FORWARDED (TCP Flags: ACK, PSH)
+Oct 28 15:56:00.180: boutique/checkoutservice-5d5f4589c5-pvh48:58206 (ID:40344) -> boutique/paymentservice-78f6cfdf7f-jx25l:50051 (ID:63978) to-endpoint FORWARDED (TCP Flags: ACK, PSH)
+Oct 28 15:56:23.895: boutique/checkoutservice-5d5f4589c5-pvh48:58206 (ID:40344) -> boutique/paymentservice-78f6cfdf7f-jx25l:50051 (ID:63978) to-overlay FORWARDED (TCP Flags: ACK, PSH)
+Oct 28 15:56:23.895: boutique/checkoutservice-5d5f4589c5-pvh48:58206 (ID:40344) -> boutique/paymentservice-78f6cfdf7f-jx25l:50051 (ID:63978) to-endpoint FORWARDED (TCP Flags: ACK, PSH)
+Oct 28 15:56:30.129: boutique/checkoutservice-5d5f4589c5-pvh48:58206 (ID:40344) -> boutique/paymentservice-78f6cfdf7f-jx25l:50051 (ID:63978) to-overlay FORWARDED (TCP Flags: ACK, PSH)
+Oct 28 15:56:30.129: boutique/checkoutservice-5d5f4589c5-pvh48:58206 (ID:40344) -> boutique/paymentservice-78f6cfdf7f-jx25l:50051 (ID:63978) to-endpoint FORWARDED (TCP Flags: ACK, PSH)
+```
